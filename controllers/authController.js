@@ -37,7 +37,7 @@ authController.login = async (req, res) => {
         const { username, password } = req.body;
 
         // Find the user by username
-        const user = await User.findOne({ username });
+        const user = await User.findOne({ username }).exec();
 
         if (!user) {
             return res.status(401).json({ message: 'Unauthorized' });
@@ -48,25 +48,25 @@ authController.login = async (req, res) => {
 
         if (match) {
             // Create access token
-            const accessToken = jwt.sign({ userId: user._id, username: user.username }, process.env.ACCESS_TOKEN_SECRET, {
+            const accessToken = jwt.sign({ id: user._id, username: user.username }, process.env.ACCESS_TOKEN_SECRET, {
                 expiresIn: '15m'
             });
 
             // Create refresh token
-            const refreshToken = jwt.sign({ userId: user._id, username: user.username }, process.env.REFRESH_TOKEN_SECRET, {
+            const refreshToken = jwt.sign({ id: user._id, username: user.username }, process.env.REFRESH_TOKEN_SECRET, {
                 expiresIn: '7d'
             });
 
-            // Attach the refresh token to the user document
-            user.refreshToken = refreshToken;
-            await user.save();
+            // Create secure cookie with refresh token 
+            res.cookie('jwt', refreshToken, {
+                httpOnly: true, //accessible only by web server 
+                secure: true, //https
+                sameSite: 'None', //cross-site cookie 
+                maxAge: 7 * 24 * 60 * 60 * 1000 //cookie expiry: set to match rT
+            })
 
-            // Send access and refresh tokens along with user information
-            res.json({
-                accessToken,
-                refreshToken,
-                user: { username: user.username, email: user.email }
-            });
+            // Send accessToken and userId
+            res.json({ accessToken, userId: user._id });
         } else {
             res.status(401).json({ message: 'Unauthorized' });
         }
@@ -77,37 +77,37 @@ authController.login = async (req, res) => {
 };
 
 authController.refreshToken = async (req, res) => {
-    try {
-        const { username } = req.user; // Provided by verifyJWT middleware
+    const cookies = req.cookies
 
-        // Find the user by username
-        const user = await User.findOne({ username });
+    if (!cookies?.jwt) return res.status(401).json({ message: 'Unauthorized' })
 
-        if (!user || user.refreshToken !== req.cookies.jwt) {
-            return res.status(403).json({ message: 'Forbidden' });
+    const refreshToken = cookies.jwt
+
+    jwt.verify(
+        refreshToken,
+        process.env.REFRESH_TOKEN_SECRET,
+        async (err, decoded) => {
+            if (err) return res.status(403).json({ message: 'Forbidden' })
+
+            const user = await User.findOne({ username: decoded.username }).exec()
+
+            if (!user) return res.status(401).json({ message: 'Unauthorized' })
+
+            // Generate a new access token
+            const accessToken = jwt.sign({ id: user._id, username: user.username }, process.env.ACCESS_TOKEN_SECRET, {
+                expiresIn: '15m'
+            });
+
+            res.json({ accessToken });
         }
-
-        // Generate a new access token
-        const accessToken = jwt.sign({ userId: user._id, username: user.username }, process.env.ACCESS_TOKEN_SECRET, {
-            expiresIn: '15m'
-        });
-
-        res.json({ accessToken });
-    } catch (error) {
-        console.error('Error refreshing token:', error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
-};
+    )
+}
 
 authController.logout = async (req, res) => {
-    try {
-        // Clear the refresh token or perform any necessary logout actions
-        res.clearCookie('jwt');
-        res.json({ message: 'Logged out successfully' });
-    } catch (error) {
-        console.error('Error during logout:', error);
-        res.status(500).json({ message: 'Logout failed' });
-    }
+    const cookies = req.cookies
+    if (!cookies?.jwt) return res.sendStatus(204) //No content
+    res.clearCookie('jwt', { httpOnly: true, sameSite: 'None', secure: true })
+    res.json({ message: 'Cookie cleared' })
 };
 
 module.exports = authController;
