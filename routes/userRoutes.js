@@ -1,8 +1,10 @@
 const express = require('express');
 const userController = require('../controllers/userController');
-const verifyJWT = require('../middleware/verifyJWT'); // Assuming you have a middleware to verify JWT
+const verifyJWT = require('../middleware/verifyJWT'); 
 
 const router = express.Router();
+
+router.get('/all', userController.getAllUsers);
 
 // Protect these routes with JWT authentication
 router.use(verifyJWT);

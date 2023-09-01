@@ -54,7 +54,12 @@ userController.updateProfile = async (req, res) => {
         // Handle avatar image upload to Cloudinary
         if (req.file) {
           const result = await cloudinary.uploader.upload(req.file.path, { folder: 'avatars' });
-          user.profile.avatar = result.secure_url;
+
+          // Transform the Cloudinary URL by appending transformation parameters
+          const cloudinaryBaseUrl = 'https://res.cloudinary.com/dewblf95z/image/upload/';
+          const transformedAvatarUrl = `${cloudinaryBaseUrl}w_100,h_100,r_max,bo_2px_solid_black/${result.public_id}.${result.format}`;
+
+          user.profile.avatar = transformedAvatarUrl;
         }
 
         await user.save();
@@ -105,6 +110,16 @@ userController.getUser = async (req, res) => {
     return res.json(userProfile);
   } catch (error) {
     console.error('Error fetching user:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+userController.getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find({}, 'username email profile'); // Specify fields to retrieve
+    return res.json(users);
+  } catch (error) {
+    console.error('Error fetching users:', error);
     return res.status(500).json({ message: 'Internal server error' });
   }
 };
