@@ -15,6 +15,9 @@ router.post('/create', taskController.createTask);
 // Get a specific task by ID
 router.get('/:id', taskController.getTask);
 
+// Define the route to toggle the task status
+router.put('/:id/toggle-status', taskController.toggleTaskStatus);
+
 // Update a task by ID
 router.put('/:id', taskController.updateTask);
 

@@ -1,4 +1,5 @@
 const Task = require('../models/Task');
+const User = require('../models/User');
 
 const taskController = {};
 
@@ -41,10 +42,41 @@ taskController.getTask = async (req, res) => {
 
 taskController.getAllTasks = async (req, res) => {
     try {
-        const tasks = await Task.find();
+        const tasks = await Task.find()
+            .populate({
+                path: 'created_by assigned_to',
+                select: 'username', // Select only the 'username' field
+                model: User, // Use the User model for population
+            });
+
         return res.json(tasks);
     } catch (error) {
         console.error('Error fetching tasks:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+taskController.toggleTaskStatus = async (req, res) => {
+    try {
+        const taskId = req.params.id;
+        const newStatus = req.body.status; // Assuming you pass the new status in the request body
+
+        const validStatuses = ['Todo', 'In Progress', 'Completed'];
+        if (!validStatuses.includes(newStatus)) {
+            return res.status(400).json({ message: 'Invalid status' });
+        }
+
+        const task = await Task.findById(taskId);
+        if (!task) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
+
+        task.status = newStatus;
+        const updatedTask = await task.save();
+
+        return res.json(updatedTask);
+    } catch (error) {
+        console.error('Error toggling task status:', error);
         return res.status(500).json({ message: 'Internal server error' });
     }
 };

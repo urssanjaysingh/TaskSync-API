@@ -26,10 +26,10 @@ const taskSchema = new mongoose.Schema(
             required: true
         },
         status: {
-            type: String,
+            type: [String], // Use an array of strings
             enum: ['Todo', 'In Progress', 'Completed'],
-            default: 'Todo'
-        }
+            default: ['Todo'], // Set a default value as an empty array or any other appropriate default
+        },
     },
     {
         timestamps: true // Adds createdAt and updatedAt fields
