@@ -4,7 +4,7 @@
   "description": "The Content Management Tool known as tasksync is a Blog-Post Project.",
   "main": "server.js",
   "scripts": {
-    "start": "npm server",
+    "start": "node server",
     "dev": "nodemon server"
   },
   "author": "Sanjay Singh",
