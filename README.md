@@ -35,3 +35,4 @@ Experience the live TaskSync API by following the link below:
 Click the button above to access the live API and explore its capabilities.
 
 For developers and project managers alike, the TaskSync API opens up opportunities for efficient project collaboration and management.
+:)
